@@ -3,7 +3,7 @@ Conversation management for Pandemonium.
 """
 
 from typing import List, Dict, Any
-from .agents import BrokerAgent, CynicAgent, DreamerAgent, CautiousAgent, BaseAgent
+from .agents import BrokerAgent, MetaAgent, BaseAgent
 from .langgraph_memory import LangGraphMemory, ConversationState
 from langchain_core.messages import HumanMessage, AIMessage
 
@@ -15,7 +15,13 @@ class Conversation:
         """Initialize a conversation with a given topic."""
         self.topic = topic
         self.broker = BrokerAgent()
-        self.agents = [CynicAgent(), DreamerAgent(), CautiousAgent()]
+        self.agents = [
+            MetaAgent(),
+            MetaAgent(),
+            MetaAgent(),
+            MetaAgent(),
+            MetaAgent(),
+        ]
         self.broker.set_agents(self.agents)
         self.round_count = 0
         self.max_rounds = 3  # Default to 3 rounds

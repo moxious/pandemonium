@@ -33,6 +33,10 @@ class BrokerAgent(BaseAgent):
         """Introduce a new topic to the conversation."""
         self.logger.info(f"Introducing topic: {topic}")
         introduction = f"""Topic of the chatroom: {topic}
+
+        The following users are participating in the conversation:
+        {", ".join([agent.name for agent in self.agents])}
+
         Anyone can start"""
         
         self.add_to_history(introduction, "The Broker")
