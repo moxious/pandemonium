@@ -4,14 +4,17 @@ A conversational agent framework built with LangChain that features multiple AI 
 
 ## Features
 
-- **Multiple AI Personas**: Three distinct conversational agents with unique personalities:
-  - **The Cynic**: Questions assumptions and brings critical thinking
-  - **The Dreamer**: Sees possibilities and inspires with optimism
-  - **The Cautious**: Considers risks and implications carefully
+- **Multiple AI Personas**: Numerous conversational agents & combinations
 - **Broker Agent**: Manages turn-taking and conversation flow
 - **Progressive Context**: Each agent only sees new conversation context, building state over time
 - **Flexible Configuration**: Environment-based configuration with dotenv support
 - **Interactive & Automatic Modes**: Run conversations automatically or step through manually
+
+## Personalities
+
+See `personas.json`; each agent is a combination of a "temperament" (cynical, dreamy, questioning) and an "expertise"
+(engineer, legal, marketing, etc).  By default, we start with 5 random conversational participants, who round-robin
+discuss the topic.
 
 ## Setup
 
