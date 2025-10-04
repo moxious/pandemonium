@@ -27,6 +27,7 @@ Examples:
     
     parser.add_argument(
         "topic",
+        nargs="?",
         help="The topic for the conversation"
     )
     
@@ -43,14 +44,86 @@ Examples:
         help="Run in interactive mode where you can continue the conversation"
     )
     
+    parser.add_argument(
+        "--agents",
+        nargs="*",
+        help="Specify agents by temperament,expertise combinations (e.g., 'helper,engineer' 'cynic,security'). Use ',' for random temperament or expertise."
+    )
+    
+    parser.add_argument(
+        "--list-personas",
+        action="store_true",
+        help="List available temperament and expertise options from personas.json"
+    )
+    
     args = parser.parse_args()
     
     try:
+        # Handle --list-personas flag
+        if args.list_personas:
+            from pandemonium.agents.meta_agent import MetaAgent
+            try:
+                # Load personas to show available options
+                import json
+                import os
+                project_root = os.path.dirname(os.path.abspath(__file__))
+                personas_path = os.path.join(project_root, "personas.json")
+                
+                with open(personas_path, 'r', encoding='utf-8') as f:
+                    personas = json.load(f)
+                
+                print("Available Temperaments:")
+                for key, value in personas["temperments"].items():
+                    print(f"  {key}: {value['name']}")
+                
+                print("\nAvailable Expertise:")
+                for key, value in personas["expertise"].items():
+                    print(f"  {key}: {value['name']}")
+                
+                print("\nExample usage:")
+                print("  python main.py 'AI ethics' --agents 'helper,engineer' 'cynic,security'")
+                print("  python main.py 'Climate change' --agents ',marketing' 'dreamer,' 'focused,legal'")
+                return
+            except Exception as e:
+                print(f"Error loading personas: {e}")
+                return
+        
+        # Validate that topic is provided when not listing personas
+        if not args.topic:
+            parser.error("topic is required when not using --list-personas")
+        
         # Validate configuration
         Config.validate()
         
+        # Validate agent specifications if provided
+        agent_specs = []
+        if args.agents:
+            from pandemonium.agents.meta_agent import MetaAgent
+            print("Validating agent specifications...")
+            for i, agent_spec in enumerate(args.agents):
+                try:
+                    # Parse the agent specification
+                    parts = agent_spec.lower().split(',')
+                    if len(parts) != 2:
+                        raise ValueError(f"Invalid agent specification '{agent_spec}'. Expected format: 'temperament,expertise'")
+                    
+                    temperament, expertise = parts
+                    
+                    # Convert empty strings to None for random selection
+                    temperament = temperament.strip() if temperament.strip() else None
+                    expertise = expertise.strip() if expertise.strip() else None
+                    
+                    # Validate by creating a MetaAgent (this will throw an error if keys are invalid)
+                    test_agent = MetaAgent(temperament=temperament, expertise=expertise)
+                    agent_specs.append((temperament, expertise))
+                    print(f"  ✓ Agent {i+1}: {temperament or 'random'},{expertise or 'random'}")
+                    
+                except Exception as e:
+                    print(f"  ✗ Invalid agent specification '{agent_spec}': {e}")
+                    sys.exit(1)
+        
         # Create conversation
-        conversation = Conversation(args.topic)
+        conversation = Conversation(args.topic, agent_specs=agent_specs)
         conversation.set_max_rounds(args.rounds)
         
         # Start conversation

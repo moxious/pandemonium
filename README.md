@@ -16,6 +16,26 @@ See `personas.json`; each agent is a combination of a "temperament" (cynical, dr
 (engineer, legal, marketing, etc).  By default, we start with 5 random conversational participants, who round-robin
 discuss the topic.
 
+### Available Personas
+
+**Temperaments:**
+- `cynic`: CynicalCedric - Skeptical, questions assumptions, realistic about challenges
+- `dreamer`: DreamyDrew - Optimistic, creative, sees endless possibilities
+- `focused`: FocusedFrank - Stays on topic, goes deep on salient aspects
+- `helper`: HelpfulHarry - Follows others' lead and expands on their thoughts
+- `wellactually`: WellAcktchuallyWally - Stickler for facts, holds others to factual statements
+- `cautious`: CautiousCathy - Considers risks and implications carefully
+- `bland`: BlandBobby - Simple, no strong opinions, stays focused
+
+**Expertise:**
+- `devadvocate`: Developer Advocate - Helps users adopt technology
+- `security`: Security Expert - Knowledgeable about security issues and risks
+- `engineer`: Principal Engineer - Software engineering and development expertise
+- `intern`: College Intern - Eager to learn, asks questions
+- `legal`: Corporate Counsel - Legal issues and risk navigation
+- `marketing`: Marketing Expert - Business positioning and market strategy
+- `executive`: Executive - Strategic alignment and company growth
+
 ## Setup
 
 ### 1. Install Dependencies
@@ -64,8 +84,17 @@ python main.py "Climate change solutions" --rounds 5
 # Interactive mode (step through each turn)
 python main.py "Remote work vs office work" --interactive
 
+# Specify custom agents by temperament,expertise
+python main.py "AI ethics" --agents "helper,engineer" "cynic,security" "dreamer,marketing"
+
+# Mix specific and random agents (use empty string for random)
+python main.py "Climate change" --agents ",marketing" "dreamer," "focused,legal"
+
+# List available personas
+python main.py --list-personas
+
 # Combine options
-python main.py "Space exploration" --rounds 4 --interactive
+python main.py "Space exploration" --rounds 4 --interactive --agents "cautious,engineer" "dreamer,executive"
 ```
 
 ### Command Line Arguments
@@ -73,6 +102,29 @@ python main.py "Space exploration" --rounds 4 --interactive
 - `topic`: The conversation topic (required)
 - `--rounds, -r`: Number of conversation rounds (default: 3)
 - `--interactive, -i`: Run in interactive mode for manual turn progression
+- `--agents`: Specify agents by temperament,expertise combinations (e.g., 'helper,engineer' 'cynic,security')
+- `--list-personas`: List available temperament and expertise options from personas.json
+
+### Agent Specification Format
+
+The `--agents` flag accepts multiple agent specifications in the format `temperament,expertise`:
+
+- **Specific agents**: `"helper,engineer"` - Creates a helpful temperament with engineering expertise
+- **Random temperament**: `",engineer"` - Random temperament with engineering expertise  
+- **Random expertise**: `"helper,"` - Helpful temperament with random expertise
+- **Random both**: `","` - Both temperament and expertise are random (same as default behavior)
+
+Examples:
+```bash
+# 3 specific agents
+python main.py "Tech ethics" --agents "cynic,security" "dreamer,marketing" "cautious,legal"
+
+# Mix of specific and random
+python main.py "AI future" --agents "focused,engineer" ",marketing" "dreamer,"
+
+# Single agent with random expertise
+python main.py "Climate policy" --agents "cautious,"
+```
 
 ## How It Works
 
