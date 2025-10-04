@@ -91,13 +91,24 @@ class Conversation:
     
     def _conclude_conversation(self) -> str:
         """Conclude the conversation."""
+        # Update broker with latest conversation context
+        recent_messages = self.langgraph_memory.get_recent_messages(self.conversation_state)
+        self.broker.set_memory_messages(recent_messages)
+        
+        # Get new messages for the broker
+        new_messages = self._get_new_messages_for_agent(self.broker)
+        self.broker.update_with_new_messages(new_messages)
+        
+        # Have the broker provide a final summary
+        broker_summary = self.broker.respond(f"Please provide a final summary of the key points discussed about {self.topic}")
+        
         conclusion = f"""\n--- Conversation Complete ---
 
 We've completed {self.max_rounds} rounds of discussion on "{self.topic}". 
 Thank you to all participants for sharing their unique perspectives!
 
-Final conversation summary:
-{self.broker.get_conversation_summary()}"""
+Final summary from the broker:
+{self.broker.name}: {broker_summary}"""
         
         # Add conclusion to LangGraph state
         self.conversation_state = self.langgraph_memory.add_message(
