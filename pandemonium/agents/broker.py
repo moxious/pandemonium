@@ -62,7 +62,7 @@ class BrokerAgent(BaseAgent):
         agent = self.agents[self.current_turn % len(self.agents)]
         self.current_turn += 1
 
-        if random.random() < 0.3:
+        if random.random() < 0.2:
             # Broker gets to speak
             return self
 
@@ -87,7 +87,6 @@ class BrokerAgent(BaseAgent):
     
     def respond(self, topic: str) -> str:
         """Generate a broker response (typically for transitions)."""
-        self.logger.info(f"Generating broker response for topic: {topic}")
         messages = self._create_messages(topic)
         response = self.llm.invoke(messages)
         

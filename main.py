@@ -62,9 +62,20 @@ Examples:
         help="List available temperament and expertise options from personas.json"
     )
     
+    parser.add_argument(
+        "--log-level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        default="INFO",
+        help="Set the logging level (default: INFO)"
+    )
+    
     args = parser.parse_args()
     
     try:
+        # Setup logging with command line log level
+        Config.LOG_LEVEL = args.log_level
+        Config.setup_logging()
+        
         # Handle --list-personas flag
         if args.list_personas:
             from pandemonium.agents.meta_agent import MetaAgent

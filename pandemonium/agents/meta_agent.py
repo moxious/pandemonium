@@ -84,7 +84,6 @@ class MetaAgent(BaseAgent):
     
     def respond(self, topic: str) -> str:
         """Generate a response based on the loaded persona."""
-        self.logger.info(f"Generating {self.name} response for topic: {topic}")
         messages = self._create_messages(topic)
         response = self.llm.invoke(messages)
         

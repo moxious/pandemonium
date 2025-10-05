@@ -6,7 +6,9 @@ from typing import List, Dict, Any
 from .agents import BrokerAgent, MetaAgent, BaseAgent
 from .langgraph_memory import LangGraphMemory, ConversationState
 from langchain_core.messages import HumanMessage, AIMessage
+import logging
 
+logger = logging.getLogger(__name__)
 
 class Conversation:
     """Manages a conversation between multiple agents."""
@@ -62,6 +64,7 @@ class Conversation:
     def next_turn(self) -> str:
         """Get the next agent's response."""
         if self.round_count >= self.max_rounds:
+            logger.info(f"Concluding conversation at {self.round_count} rounds")
             return self._conclude_conversation()
         
         agent = self.broker.get_next_agent()
@@ -75,6 +78,7 @@ class Conversation:
         agent.update_with_new_messages(new_messages)
         
         # Generate response
+        logger.info(f"{self.round_count}: Next speaker thinking: {agent.name}")
         response = agent.respond(self.topic)
         
         # Add to broker's history
@@ -116,15 +120,19 @@ class Conversation:
         new_messages = self._get_new_messages_for_agent(self.broker)
         self.broker.update_with_new_messages(new_messages)
         
+        logger.info(f"Concluding / summarizing conversation")
+
         # Have the broker provide a final summary
-        broker_summary = self.broker.respond(f"Please provide a final summary of the key points discussed about {self.topic}")
+        broker_summary = self.broker.respond(f"""
+            Please provide a final summary of the key points discussed, and choose an outcome
+            for the conversation, using your evaluation criteria.
+        """)
         
         conclusion = f"""\n--- Conversation Complete ---
 
-We've completed {self.max_rounds} rounds of discussion on "{self.topic}". 
-Thank you to all participants for sharing their unique perspectives!
+We've completed {self.max_rounds} rounds of discussion.
 
-Final summary from the broker:
+Final summary:
 {self.broker.name}: {broker_summary}"""
         
         # Add conclusion to LangGraph state
