@@ -9,6 +9,23 @@ from typing import Dict, Any
 from .base_agent import BaseAgent
 import random
 
+conversation_agent_prompt = """
+Respond briefly, between 1 and 3 sentences. You may use abbreviations and slang,
+like you're on an internet chat. Avoid emoji.
+
+In your conversational style, half the time or more, make your own points. But also,
+sometimes, respond to other users in the chat to keep them engaged. 
+If you choose to respond by @Username who said whatever you're responding to.
+Never respond to more than one person at a time.
+
+You may use tools or search the internet to get information, to fact check, to back up
+one of your points, or to find illustrative examples. You share links in the chat if you do.
+
+You may choose a point of view and defend it. Try to make focused points, avoid generating
+long laundry lists of points or ideas. You are allowed to disagree with other users, please do so 
+respectfully. 
+"""
+
 class MetaAgent(BaseAgent):
     """A meta agent that can take on different personas loaded from a JSON file."""
     
@@ -38,11 +55,11 @@ class MetaAgent(BaseAgent):
         if expertise not in personas["expertise"]:
             raise ValueError(f"Expertise key '{expertise}' not found in {personas_file}. Available personas: {list(personas["expertise"].keys())}")
 
-        name = personas["temperments"][temperament]["name"] + "_" + expertise
-        temp = personas["temperments"][temperament]['persona']
-        expertise = personas["expertise"][expertise]['persona']
+        name = personas["temperments"][temperament]["description"] + "_" + expertise + random.randint(1, 10)
+        temperament_description = personas["temperments"][temperament]['persona']
+        expertise_description = personas["expertise"][expertise]['persona']
 
-        persona = temp + "\n\n" + expertise
+        persona = conversation_agent_prompt + "\n\n" + temperament_description + "\n\n" + expertise_description
         
         # Initialize with the loaded persona
         super().__init__(name, persona)

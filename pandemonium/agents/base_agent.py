@@ -9,35 +9,23 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, BaseMessage
 from pandemonium.config import Config
 
-always_on_prompt = """
-Respond briefly, between 1 and 3 sentences. You may use abbreviations and slang,
-like you're on an internet chat. Avoid emoji.
-
-In your conversational style, half the time or more, make your own points. But also,
-sometimes, respond to other users in the chat to keep them engaged. 
-If you choose to respond by @Username who said whatever you're responding to.
-Never respond to more than one person at a time.
-
-You may use tools or search the internet to get information, to fact check, to back up
-one of your points, or to find illustrative examples. You share links in the chat if you do.
-
-You may choose a point of view and defend it. Try to make focused points, avoid generating
-long laundry lists of points or ideas. You are allowed to disagree with other users, please do so 
-respectfully. 
-"""
-
 class BaseAgent(ABC):
     """Base class for all conversational agents."""
     
-    def __init__(self, name: str, persona: str):
+    def __init__(self, name: str, persona: str, model=Config.OPENAI_MODEL, temperature=Config.TEMPERATURE, enable_tools=Config.ENABLE_TOOLS, allowed_tools=Config.ALLOWED_TOOLS):
         """Initialize the agent with a name and persona description."""
         self.name = name
-        self.persona = always_on_prompt + "\n\n" + persona
+        self.persona = persona
+
+        self.enable_tools = enable_tools
+        self.allowed_tools = allowed_tools
+
         self.llm = ChatOpenAI(
-            model=Config.OPENAI_MODEL,
+            model,
             openai_api_key=Config.OPENAI_API_KEY,
-            temperature=0.7
+            temperature=temperature
         )
+
         self.conversation_history: List[Dict[str, Any]] = []
         self.last_seen_turn = 0  # Track the last turn this agent has seen
         
@@ -111,33 +99,15 @@ class BaseAgent(ABC):
         recent_messages = self.memory_messages[-window_size:] if len(self.memory_messages) > window_size else self.memory_messages
         
         if not recent_messages:
-            # First message - include system prompt
-            system_prompt = f"""You are {self.name}, a chatroom participant with the following persona:
-
-{self.persona}
-
-You are participating in a round-robin conversation about: {topic}
-
-Respond naturally as your persona would, keeping your response concise but engaging. You can reference, build upon, or disagree with what others have said."""
-
             return [
-                SystemMessage(content=system_prompt),
+                SystemMessage(content=self.persona),
                 HumanMessage(content=f"Please respond to the conversation about {topic}.")
             ]
         else:
-            # Subsequent messages - use memory for context
-            system_prompt = f"""You are {self.name}, a chatroom participant with the following persona:
-
-{self.persona}
-
-You are participating in a round-robin conversation about: {topic}
-
-Respond naturally as your persona would, keeping your response concise but engaging. You can reference, build upon, or disagree with what others have said."""
-
             # Combine system prompt with recent memory messages
-            messages = [SystemMessage(content=system_prompt)]
+            messages = [SystemMessage(content=self.persona)]
             messages.extend(recent_messages)
-            messages.append(HumanMessage(content=f"Please respond to the conversation about {topic}."))
+            messages.append(HumanMessage(content=f"Playing your persona, please contribute to the discussion."))
             
             self.logger.debug(f"Using {len(recent_messages)} messages from memory for context")
             return messages

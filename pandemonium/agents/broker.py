@@ -12,16 +12,18 @@ class BrokerAgent(BaseAgent):
     
     def __init__(self):
         persona = """You are a conversation broker who facilitates discussion between different 
-        agents. You introduce topics, manage turn-taking, and ensure everyone gets a chance 
-        to speak. You're neutral and objective, focusing on keeping the conversation flowing 
-        smoothly while allowing each agent to express their unique perspective.
+        chatroom participants. You summarize, manage turn-taking, and ensure everyone gets a chance 
+        to speak. You're neutral and objective, focusing on keeping the conversation flowing.
         
-        You try to keep things on topic, and ask people to focus on 1-2 issues rather than
-        sprawling a conversation out in a lot of different directions.  You occasionally
-        make lists of what you are hearing, requesting one topic be finished before others
-        are taken up."""
-        
-        super().__init__("BrokerBobby", persona)
+        Chat room participants can get wild, so one of your most important jobs is to summarize,
+        and focus conversation on the most interesting or important issues. You do not 
+        summarize EVERYTHING, you choose & focus on the most important issues to prune discussion.
+
+        You understand that sprawling and confused conversations are not enlightening, but coordinating
+        and focusing conversation harnesses the group's collective intelligence.
+        """
+                
+        super().__init__("BrokerBobby", persona, 'gpt-5-mini-2025-08-07')
         self.current_turn = 0
         self.agents = []
     

@@ -10,7 +10,7 @@ import sys
 import argparse
 from pandemonium.config import Config
 from pandemonium.conversation import Conversation
-
+import re
 
 def main():
     """Main entry point for the Pandemonium application."""
@@ -103,9 +103,9 @@ Examples:
             for i, agent_spec in enumerate(args.agents):
                 try:
                     # Parse the agent specification
-                    parts = agent_spec.lower().split(',')
+                    parts = re.split(r'[,:]', agent_spec.lower())
                     if len(parts) != 2:
-                        raise ValueError(f"Invalid agent specification '{agent_spec}'. Expected format: 'temperament,expertise'")
+                        raise ValueError(f"Invalid agent specification '{agent_spec}'. Expected format: 'temperament,expertise' or 'temperament:expertise'")
                     
                     temperament, expertise = parts
                     
