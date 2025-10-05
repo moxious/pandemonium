@@ -4,6 +4,7 @@ Conversation management for Pandemonium.
 
 from typing import List, Dict, Any
 from .agents import BrokerAgent, MetaAgent, BaseAgent
+from .agents.evaluator_agent import EvaluatorAgent
 from .langgraph_memory import LangGraphMemory, ConversationState
 from langchain_core.messages import HumanMessage, AIMessage
 import logging
@@ -110,11 +111,27 @@ class Conversation:
         
         return new_messages
     
+    def _format_conversation_history(self) -> str:
+        """Format the conversation history as a readable string for evaluation."""
+        # Get all messages from the broker's conversation history
+        all_messages = self.broker.conversation_history
+        
+        if not all_messages:
+            return "No conversation history available."
+        
+        # Format each message as "Speaker: Message"
+        formatted_messages = []
+        for message in all_messages:
+            speaker = message.get('speaker', 'Unknown')
+            content = message.get('message', '')
+            formatted_messages.append(f"{speaker}: {content}")
+        
+        return "\n".join(formatted_messages)
+    
     def _conclude_conversation(self) -> str:
         """Conclude the conversation with a fresh evaluator agent."""
         logger.info(f"Concluding / summarizing conversation")
         
-        # Create a fresh MetaAgent for final evaluation (not the broker)
         # Create comprehensive evaluation prompt
         evaluation_prompt = f"""
 You are an independent evaluator reviewing a complete chatroom discussion about "{self.topic}".
@@ -131,20 +148,12 @@ Next, you will synthesize the best outcome of the conversation, based on the eva
 Finally, you will provide a brief summary of the best parts of the conversation, and end with a 
 statement that says:
 
-Result: (your sythesis of the best outcomein no more than 3 sentences)
+Result: (your synthesis of the best outcome in no more than 3 sentences)
 """
-        evaluator = MetaAgent("nononsense", "writer")
         
-        # Give the evaluator the entire conversation context
-        all_messages = self.langgraph_memory.get_conversation_history(self.conversation_state)
-        evaluator.update_with_new_messages(all_messages)
-        
-        # Get all conversation messages for the evaluator
-        all_messages = self.broker.conversation_history
-        evaluator.update_with_new_messages(all_messages)
-        
-        # Get the evaluator's response
-        evaluator_summary = evaluator.respond(evaluation_prompt)
+        evaluator = EvaluatorAgent(evaluation_prompt)
+        conversation_history = self._format_conversation_history()
+        evaluator_summary = evaluator.evaluate_conversation(conversation_history)
         
         conclusion = f"""\n--- Conversation Complete ---
 
