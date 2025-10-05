@@ -151,7 +151,7 @@ statement that says:
 Result: (your synthesis of the best outcome in no more than 3 sentences)
 """
         
-        evaluator = EvaluatorAgent(evaluation_prompt)
+        evaluator = EvaluatorAgent(evaluation_prompt, model='gpt-5', temperature=0.5)
         conversation_history = self._format_conversation_history()
         evaluator_summary = evaluator.evaluate_conversation(conversation_history)
         
