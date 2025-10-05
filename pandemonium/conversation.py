@@ -11,16 +11,17 @@ from langchain_core.messages import HumanMessage, AIMessage
 class Conversation:
     """Manages a conversation between multiple agents."""
     
-    def __init__(self, topic: str, agent_specs: List[tuple] = None):
+    def __init__(self, topic: str, agent_specs: List[tuple] = None, evaluation_criteria: str=None):
         """Initialize a conversation with a given topic.
         
         Args:
             topic: The conversation topic
             agent_specs: List of (temperament, expertise) tuples for agent creation.
                         If None, creates 5 random agents.
+            evaluation_criteria: The criteria for the broker to evaluate the conversation.
         """
         self.topic = topic
-        self.broker = BrokerAgent()
+        self.broker = BrokerAgent(topic, evaluation_criteria)
         
         if agent_specs:
             # Create agents based on specifications

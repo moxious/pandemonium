@@ -14,12 +14,12 @@ Respond briefly, between 1 and 3 sentences. You may use abbreviations and slang,
 like you're on an internet chat. Avoid emoji.
 
 In your conversational style, half the time or more, make your own points. But also,
-sometimes, respond to other users in the chat to keep them engaged. 
+sometimes, respond to other users in the chat to keep them engaged. Remember, this is
+a group conversation with other users! 
 If you choose to respond by @Username who said whatever you're responding to.
-Never respond to more than one person at a time.
+Never respond to more than one person at a time.  
 
-You may use tools or search the internet to get information, to fact check, to back up
-one of your points, or to find illustrative examples. You share links in the chat if you do.
+Do not output your name or any other "chat formatting", that will be handled for you.
 
 You may choose a point of view and defend it. Try to make focused points, avoid generating
 long laundry lists of points or ideas. You are allowed to disagree with other users, please do so 
@@ -54,16 +54,16 @@ class MetaAgent(BaseAgent):
 
         if expertise not in personas["expertise"]:
             raise ValueError(f"Expertise key '{expertise}' not found in {personas_file}. Available personas: {list(personas["expertise"].keys())}")
-
-        name = personas["temperments"][temperament]["description"] + "_" + expertise + random.randint(1, 10)
+        
+        name = personas["temperments"][temperament]["description"] + "_" + expertise + "%d" % random.randint(1, 10)
         temperament_description = personas["temperments"][temperament]['persona']
         expertise_description = personas["expertise"][expertise]['persona']
 
         persona = conversation_agent_prompt + "\n\n" + temperament_description + "\n\n" + expertise_description
         
         # Initialize with the loaded persona
-        super().__init__(name, persona)
-        self.logger = logging.getLogger(f"pandemonium.agents.meta.{temperament}_{expertise}")
+        super().__init__(name=name, persona=persona)
+        self.logger = logging.getLogger(f"pandemonium.agents.meta.{name}")
     
     def _load_personas(self, personas_file: str) -> Dict[str, Any]:
         """Load personas from the JSON file."""

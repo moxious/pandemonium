@@ -26,7 +26,7 @@ Examples:
     )
     
     parser.add_argument(
-        "topic",
+        "--topic", "-t",
         nargs="?",
         help="The topic for the conversation"
     )
@@ -38,6 +38,12 @@ Examples:
         help="Number of conversation rounds (default: 3)"
     )
     
+    parser.add_argument(
+        "--criteria", "-c",
+        default="pick most interesting or important issues",
+        help="The criteria for the broker to evaluate the conversation (default: pick most interesting or important issues)"
+    )
+
     parser.add_argument(
         "--interactive", "-i",
         action="store_true",
@@ -107,17 +113,16 @@ Examples:
                     if len(parts) != 2:
                         raise ValueError(f"Invalid agent specification '{agent_spec}'. Expected format: 'temperament,expertise' or 'temperament:expertise'")
                     
-                    temperament, expertise = parts
+                    temperament = parts[0]
+                    expertise = parts[1]
                     
                     # Convert empty strings to None for random selection
                     temperament = temperament.strip() if temperament.strip() else None
                     expertise = expertise.strip() if expertise.strip() else None
-                    
                     # Validate by creating a MetaAgent (this will throw an error if keys are invalid)
                     test_agent = MetaAgent(temperament=temperament, expertise=expertise)
                     agent_specs.append((temperament, expertise))
-                    print(f"  ✓ Agent {i+1}: {temperament or 'random'},{expertise or 'random'}")
-                    
+                    print(f"  ✓ Agent {i+1}: {temperament or 'random'},{expertise or 'random'}")                   
                 except Exception as e:
                     print(f"  ✗ Invalid agent specification '{agent_spec}': {e}")
                     sys.exit(1)

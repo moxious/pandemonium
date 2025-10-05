@@ -12,16 +12,13 @@ from pandemonium.config import Config
 class BaseAgent(ABC):
     """Base class for all conversational agents."""
     
-    def __init__(self, name: str, persona: str, model=Config.OPENAI_MODEL, temperature=Config.TEMPERATURE, enable_tools=Config.ENABLE_TOOLS, allowed_tools=Config.ALLOWED_TOOLS):
+    def __init__(self, name: str, persona: str, model=Config.OPENAI_MODEL, temperature=Config.TEMPERATURE):
         """Initialize the agent with a name and persona description."""
         self.name = name
         self.persona = persona
 
-        self.enable_tools = enable_tools
-        self.allowed_tools = allowed_tools
-
         self.llm = ChatOpenAI(
-            model,
+            model=model,
             openai_api_key=Config.OPENAI_API_KEY,
             temperature=temperature
         )

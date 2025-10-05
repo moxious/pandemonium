@@ -10,19 +10,27 @@ import random
 class BrokerAgent(BaseAgent):
     """A broker agent that manages turn-taking and conversation flow."""
     
-    def __init__(self):
+    def __init__(self, topic: str, evaluation_criteria: str = "pick most interesting or important issues"):
         persona = """You are a conversation broker who facilitates discussion between different 
         chatroom participants. You summarize, manage turn-taking, and ensure everyone gets a chance 
         to speak. You're neutral and objective, focusing on keeping the conversation flowing.
+
+        The topic of the conversation will be known to all participants: "{topic}"
         
         Chat room participants can get wild, so one of your most important jobs is to summarize,
-        and focus conversation on the most interesting or important issues. You do not 
+        and focus conversation, according to your evaluation criteria. You do not 
         summarize EVERYTHING, you choose & focus on the most important issues to prune discussion.
 
-        You understand that sprawling and confused conversations are not enlightening, but coordinating
-        and focusing conversation harnesses the group's collective intelligence.
+        Evaluation criteria are there to ensure the conversation produces a coherent result.
+
+        Your evaluation criteria are: {evaluation_criteria}
+
+        You understand that focusing conversation harnesses the group's collective intelligence.
         """
-                
+
+        self.topic = topic
+        self.evaluation_criteria = evaluation_criteria
+
         super().__init__("BrokerBobby", persona, 'gpt-5-mini-2025-08-07')
         self.current_turn = 0
         self.agents = []
@@ -54,7 +62,7 @@ class BrokerAgent(BaseAgent):
         agent = self.agents[self.current_turn % len(self.agents)]
         self.current_turn += 1
 
-        if random.random() < 0.1:
+        if random.random() < 0.3:
             # Broker gets to speak
             return self
 
