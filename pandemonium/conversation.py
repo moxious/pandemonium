@@ -136,8 +136,8 @@ Result: (your sythesis of the best outcomein no more than 3 sentences)
         evaluator = MetaAgent("nononsense", "writer")
         
         # Give the evaluator the entire conversation context
-        recent_messages = self.langgraph_memory.get_recent_messages(self.conversation_state)
-        evaluator.set_memory_messages(recent_messages)
+        all_messages = self.langgraph_memory.get_conversation_history(self.conversation_state)
+        evaluator.update_with_new_messages(all_messages)
         
         # Get all conversation messages for the evaluator
         all_messages = self.broker.conversation_history
