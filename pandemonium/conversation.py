@@ -119,15 +119,19 @@ class Conversation:
         evaluation_prompt = f"""
 You are an independent evaluator reviewing a complete chatroom discussion about "{self.topic}".
 
-You have access to the entire conversation history. Your task is to:
+You have access to the entire conversation history. 
 
-1. Read through the entire chatroom discussion
-2. Use the evaluation criteria provided to choose the best outcome
-3. Summarize the best points, do not need to summarize everything
-4. Make a final judgment or choice about the best outcome/solution
-5. Provide the final judgment or choice as the last part of your response.
+First, you will read your evaluation criteria, these frame how you understand the
+conversation.  Your evaluation criteria are: {self.broker.evaluation_criteria}
 
-Your evaluation criteria: {self.broker.evaluation_criteria}
+Next, you will read through the entire chatroom discussion.
+
+Next, you will synthesize the best outcome of the conversation, based on the evaluation criteria.
+
+Finally, you will provide a brief summary of the best parts of the conversation, and end with a 
+statement that says:
+
+Result: (your sythesis of the best outcomein no more than 3 sentences)
 """
         evaluator = MetaAgent("nononsense", "writer")
         
