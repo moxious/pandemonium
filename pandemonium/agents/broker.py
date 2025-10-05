@@ -62,8 +62,8 @@ class BrokerAgent(BaseAgent):
         agent = self.agents[self.current_turn % len(self.agents)]
         self.current_turn += 1
 
-        if random.random() < 0.2:
-            # Broker gets to speak
+        if self.current_turn >= 2 and random.random() < 0.3:
+            # Broker gets to speak, but not too early.
             return self
 
         if random.random() < 0.1:

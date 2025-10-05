@@ -111,29 +111,44 @@ class Conversation:
         return new_messages
     
     def _conclude_conversation(self) -> str:
-        """Conclude the conversation."""
-        # Update broker with latest conversation context
-        recent_messages = self.langgraph_memory.get_recent_messages(self.conversation_state)
-        self.broker.set_memory_messages(recent_messages)
-        
-        # Get new messages for the broker
-        new_messages = self._get_new_messages_for_agent(self.broker)
-        self.broker.update_with_new_messages(new_messages)
-        
+        """Conclude the conversation with a fresh evaluator agent."""
         logger.info(f"Concluding / summarizing conversation")
+        
+        # Create a fresh MetaAgent for final evaluation (not the broker)
+        # Create comprehensive evaluation prompt
+        evaluation_prompt = f"""
+You are an independent evaluator reviewing a complete chatroom discussion about "{self.topic}".
 
-        # Have the broker provide a final summary
-        broker_summary = self.broker.respond(f"""
-            Please provide a final summary of the key points discussed, and choose an outcome
-            for the conversation, using your evaluation criteria.
-        """)
+You have access to the entire conversation history. Your task is to:
+
+1. Read through the entire chatroom discussion
+2. Use the evaluation criteria provided to choose the best outcome
+3. Summarize the best points, do not need to summarize everything
+4. Make a final judgment or choice about the best outcome/solution
+5. Provide the final judgment or choice as the last part of your response.
+
+Your evaluation criteria: {self.broker.evaluation_criteria}
+"""
+        evaluator = MetaAgent("nononsense", "writer")
+        
+        # Give the evaluator the entire conversation context
+        recent_messages = self.langgraph_memory.get_recent_messages(self.conversation_state)
+        evaluator.set_memory_messages(recent_messages)
+        
+        # Get all conversation messages for the evaluator
+        all_messages = self.broker.conversation_history
+        evaluator.update_with_new_messages(all_messages)
+        
+        # Get the evaluator's response
+        evaluator_summary = evaluator.respond(evaluation_prompt)
         
         conclusion = f"""\n--- Conversation Complete ---
 
-We've completed {self.max_rounds} rounds of discussion.
+We've completed {self.max_rounds} rounds of discussion on "{self.topic}". 
+Thank you to all participants for sharing their unique perspectives!
 
-Final summary:
-{self.broker.name}: {broker_summary}"""
+Final evaluation by independent assessor:
+{evaluator.name}: {evaluator_summary}"""
         
         # Add conclusion to LangGraph state
         self.conversation_state = self.langgraph_memory.add_message(

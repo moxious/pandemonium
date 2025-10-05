@@ -14,7 +14,7 @@ class Config:
     
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
     OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5")
-    TEMPERATURE = float(os.getenv("TEMPERATURE", "0.9"))
+    TEMPERATURE = float(os.getenv("TEMPERATURE", "0.7"))
     ENABLE_TOOLS = os.getenv("ENABLE_TOOLS", "false").lower() == "true"
     ALLOWED_TOOLS = os.getenv("ALLOWED_TOOLS", "web_search,calculator").split(",")
 

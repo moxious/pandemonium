@@ -166,8 +166,7 @@ Examples:
                     print("\n\nConversation interrupted. Goodbye!")
                     break
         else:
-            # Automatic mode - run all rounds
-            for turn in range(args.rounds * 3):  # 3 agents per round
+            while True:
                 response = conversation.next_turn()
                 print()
                 if "Conversation Complete" in response:
