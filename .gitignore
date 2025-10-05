@@ -190,3 +190,6 @@ Thumbs.db
 *.log
 *.tmp
 
+# Do not store debates tracker or logs
+DEBATES.md
+*.txt

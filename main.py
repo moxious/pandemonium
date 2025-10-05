@@ -45,12 +45,6 @@ Examples:
     )
 
     parser.add_argument(
-        "--interactive", "-i",
-        action="store_true",
-        help="Run in interactive mode where you can continue the conversation"
-    )
-    
-    parser.add_argument(
         "--agents",
         nargs="*",
         help="Specify agents by temperament,expertise combinations (e.g., 'helper,engineer' 'cynic,security'). Use ',' for random temperament or expertise."
@@ -147,34 +141,14 @@ Examples:
         print(conversation.start_conversation())
         print("\n" + "="*50 + "\n")
         
-        if args.interactive:
-            # Interactive mode
-            while True:
-                try:
-                    user_input = input("Press Enter for next turn (or 'quit' to exit): ").strip()
-                    if user_input.lower() in ['quit', 'exit', 'q']:
-                        break
-                    
-                    response = conversation.next_turn()
-                    if "Conversation Complete" in response:
-                        print(response)
-                        break
-                    
-                    print(response)
-                    print("\n" + "-"*30 + "\n")
-                    
-                except KeyboardInterrupt:
-                    print("\n\nConversation interrupted. Goodbye!")
-                    break
-        else:
-            while True:
-                response = conversation.next_turn()
-                print()
-                if "Conversation Complete" in response:
-                    print(response)
-                    break
-                
+        while True:
+            response = conversation.next_turn()
+            print()
+            if "Conversation Complete" in response:
                 print(response)
+                break
+            
+            print(response)
                 
     except ValueError as e:
         print(f"Configuration error: {e}")
