@@ -29,8 +29,9 @@ class Conversation:
         if agent_specs:
             # Create agents based on specifications
             self.agents = []
-            for temperament, expertise in agent_specs:
-                agent = MetaAgent(temperament=temperament, expertise=expertise)
+            for temperament, expertise, trait in agent_specs:
+                logging.info(f"Creating agent temperament={temperament}, expertise={expertise}, trait={trait}")
+                agent = MetaAgent(temperament=temperament, expertise=expertise, trait=trait)
                 self.agents.append(agent)
         else:
             # Default behavior: create 5 random agents

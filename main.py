@@ -121,19 +121,20 @@ Examples:
                 try:
                     # Parse the agent specification
                     parts = re.split(r'[,:]', agent_spec.lower())
-                    if len(parts) != 2:
+                    if len(parts) == 1:
                         raise ValueError(f"Invalid agent specification '{agent_spec}'. Expected format: 'temperament,expertise' or 'temperament:expertise'")
                     
                     temperament = parts[0]
                     expertise = parts[1]
+                    trait = parts[2]
                     
                     # Convert empty strings to None for random selection
                     temperament = temperament.strip() if temperament.strip() else None
                     expertise = expertise.strip() if expertise.strip() else None
                     # Validate by creating a MetaAgent (this will throw an error if keys are invalid)
-                    test_agent = MetaAgent(temperament=temperament, expertise=expertise)
-                    agent_specs.append((temperament, expertise))
-                    print(f"  ✓ Agent {i+1}: {temperament or 'random'},{expertise or 'random'}")                   
+                    test_agent = MetaAgent(temperament=temperament, expertise=expertise, trait=trait)
+                    agent_specs.append((temperament, expertise, trait))
+                    print(f"  ✓ Agent {i+1}: {temperament or 'random'},{expertise or 'random'},{trait or 'random'}")                   
                 except Exception as e:
                     print(f"  ✗ Invalid agent specification '{agent_spec}': {e}")
                     sys.exit(1)

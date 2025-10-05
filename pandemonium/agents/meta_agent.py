@@ -10,8 +10,13 @@ from .base_agent import BaseAgent
 import random
 
 conversation_agent_prompt = """
-Respond briefly, between 1 and 3 sentences. You may use abbreviations and slang,
-like you're on an internet chat. Avoid emoji.
+You are a participant in an online groupchat. You respond briefly and avoid multiple paragraphs of output. 
+You may use abbreviations and slang, like you're on an internet chat. Avoid emoji.
+
+If you choose to respond to a user, use @Username to reference them. Never respond to more than 
+one person.  
+
+Always stay on the topic of the chatroom or you will be removed.
 
 In your conversational style, half the time or more, make your own points. But also,
 sometimes, respond to other users in the chat to keep them engaged. Remember, this is
@@ -29,7 +34,7 @@ respectfully.
 class MetaAgent(BaseAgent):
     """A meta agent that can take on different personas loaded from a JSON file."""
     
-    def __init__(self, temperament: str = None, expertise: str = None, personas_file: str = "personas.json"):
+    def __init__(self, temperament: str = None, expertise: str = None, trait: str = "generalist", personas_file: str = "personas.json"):
         """
         Initialize the MetaAgent with a specific persona.
         
@@ -48,23 +53,45 @@ class MetaAgent(BaseAgent):
             temperament = random.choice(list(personas["temperments"].keys()))
         if not expertise or expertise is None:
             expertise = random.choice(list(personas["expertise"].keys()))
+        if not trait or trait is None:
+            trait = random.choice(list(personas["traits"].keys()))
 
         if temperament not in personas["temperments"]:
-            raise ValueError(f"Temperament key '{temperament}' not found in {personas_file}. Available personas: {list(personas["temperments"].keys())}")
+            raise ValueError(f"Temperament key '{temperament}' not found in personas. Available personas: {list(personas["temperments"].keys())}")
 
         if expertise not in personas["expertise"]:
-            raise ValueError(f"Expertise key '{expertise}' not found in {personas_file}. Available personas: {list(personas["expertise"].keys())}")
+            raise ValueError(f"Expertise key '{expertise}' not found in personas. Available personas: {list(personas["expertise"].keys())}")
         
+        if trait not in personas["traits"]:
+            raise ValueError(f"Trait key '{trait}' not found in personas. Available personas: {list(personas["traits"].keys())}")
+
         name = personas["temperments"][temperament]["description"] + "_" + expertise + "%d" % random.randint(1, 10)
         temperament_description = personas["temperments"][temperament]['persona']
         expertise_description = personas["expertise"][expertise]['persona']
 
-        persona = conversation_agent_prompt + "\n\n" + temperament_description + "\n\n" + expertise_description
-        
+        persona = f"""{{conversation_agent_prompt}}
+
+        {temperament_description}
+
+        {expertise_description}
+
+        {self.build_traits(trait, personas)}
+        """
+                
         # Initialize with the loaded persona
         super().__init__(name=name, persona=persona)
         self.logger = logging.getLogger(f"pandemonium.agents.meta.{name}")
     
+    def build_traits(self, trait: str, personas: Dict[str, Any]) -> str:
+        """Build the traits for the agent."""
+        if trait not in personas["traits"]:
+            raise ValueError(f"Trait key '{trait}' not found in {self.personas_file}. Available traits: {list(personas["traits"].keys())}")
+        
+        return f"""Your conversational traits control how you interact with others in the chatroom. Your trait behavior is:
+
+        {trait}: {personas["traits"][trait]}
+        """
+
     def _load_personas(self, personas_file: str) -> Dict[str, Any]:
         """Load personas from the JSON file."""
         # Try to find the personas file in the project root
