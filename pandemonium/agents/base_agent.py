@@ -68,16 +68,6 @@ class BaseAgent(ABC):
         """Set the memory messages from LangGraph state."""
         self.memory_messages = messages
     
-    def get_full_context(self) -> str:
-        """Get the complete conversation context for this agent."""
-        if not self.conversation_history:
-            return "This is the beginning of the conversation."
-        
-        context_parts = []
-        for entry in self.conversation_history:
-            context_parts.append(f"{entry['speaker']}: {entry['message']}")
-        
-        return "\n".join(context_parts)
     
     @abstractmethod
     def respond(self, topic: str) -> str:
