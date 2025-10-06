@@ -84,15 +84,10 @@ class BrokerAgent(BaseAgent):
         return "\n".join(summary_parts)
     
     def respond(self, topic: str) -> str:
-        """Generate a broker response (typically for transitions)."""
-        # Create input text for the topic
-        input_text = f"Please respond to the conversation about {topic}."
-        
-        response = self._invoke_agent(input_text)
+        messages = self._create_messages(topic)
+        response = self.llm.invoke(messages)
         
         # Add response to memory for future context
-        self._add_response_to_memory(response)
+        self._add_response_to_memory(response.content)
         
-        self.logger.debug(f"Broker response generated: {response[:100]}...")
-        return response
-
+        return response.content
