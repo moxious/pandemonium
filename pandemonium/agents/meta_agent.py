@@ -50,14 +50,14 @@ class MetaAgent(BaseAgent):
         self.expertise = expertise
 
         if not temperament or temperament is None:
-            temperament = random.choice(list(personas["temperments"].keys()))
+            temperament = random.choice(list(personas["temperaments"].keys()))
         if not expertise or expertise is None:
             expertise = random.choice(list(personas["expertise"].keys()))
         if not trait or trait is None:
             trait = random.choice(list(personas["traits"].keys()))
 
-        if temperament not in personas["temperments"]:
-            raise ValueError(f"Temperament key '{temperament}' not found in personas. Available personas: {list(personas["temperments"].keys())}")
+        if temperament not in personas["temperaments"]:
+            raise ValueError(f"Temperament key '{temperament}' not found in personas. Available personas: {list(personas["temperaments"].keys())}")
 
         if expertise not in personas["expertise"]:
             raise ValueError(f"Expertise key '{expertise}' not found in personas. Available personas: {list(personas["expertise"].keys())}")
@@ -65,8 +65,8 @@ class MetaAgent(BaseAgent):
         if trait not in personas["traits"]:
             raise ValueError(f"Trait key '{trait}' not found in personas. Available personas: {list(personas["traits"].keys())}")
 
-        name = personas["temperments"][temperament]["description"] + "_" + expertise + "%d" % random.randint(1, 10)
-        temperament_description = personas["temperments"][temperament]['persona']
+        name = personas["temperaments"][temperament]["description"] + "_" + expertise + "%d" % random.randint(1, 10)
+        temperament_description = personas["temperaments"][temperament]['persona']
         expertise_description = personas["expertise"][expertise]['persona']
 
         persona = f"""{{conversation_agent_prompt}}
@@ -132,7 +132,7 @@ class MetaAgent(BaseAgent):
             
             with open(personas_path, 'r', encoding='utf-8') as f:
                 personas = json.load(f)
-                return list(personas["temperments"].keys())
+                return list(personas["temperaments"].keys())
         except Exception as e:
             logging.getLogger("pandemonium.agents.meta").error(f"Error loading available personas: {e}")
             return []

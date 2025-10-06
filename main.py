@@ -84,7 +84,7 @@ Examples:
                     personas = json.load(f)
                 
                 print("Available Temperaments:")
-                for key, value in personas["temperments"].items():
+                for key, value in personas["temperaments"].items():
                     print(f"  {key}: {value['name']}")
                 
                 print("\nAvailable Expertise:")
