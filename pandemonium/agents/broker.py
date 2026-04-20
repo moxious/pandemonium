@@ -2,37 +2,35 @@
 Broker agent implementation for managing conversation flow.
 """
 
-import logging
 from typing import List
 from .base_agent import BaseAgent
-import random
 
 class BrokerAgent(BaseAgent):
     """A broker agent that manages turn-taking and conversation flow."""
     
-    def __init__(self, topic: str, evaluation_criteria: str = "pick most interesting or important issues"):
-        persona = """You are a conversation broker who facilitates discussion between different 
-        chatroom participants. You summarize, manage turn-taking, and ensure everyone gets a chance 
+    def __init__(self, topic: str, evaluation_criteria: str = "pick most interesting or important issues",
+                 model='gpt-5-mini-2025-08-07', provider='openai'):
+        self.topic = topic
+        self.evaluation_criteria = evaluation_criteria
+
+        persona = f"""You are a conversation broker who facilitates discussion between different
+        chatroom participants. You summarize, manage turn-taking, and ensure everyone gets a chance
         to speak. You're neutral and objective, focusing on keeping the conversation flowing.
 
-        The topic of the conversation will be known to all participants: "{topic}"
-        
+        The topic of the conversation will be known to all participants: "{self.topic}"
+
         Chat room participants can get wild, so one of your most important jobs is to summarize,
-        and focus conversation, according to your evaluation criteria. You do not 
+        and focus conversation, according to your evaluation criteria. You do not
         summarize EVERYTHING, you choose & focus on the most important issues to prune discussion.
 
         Evaluation criteria are there to ensure the conversation produces a coherent result.
 
-        Your evaluation criteria are: {evaluation_criteria}
+        Your evaluation criteria are: {self.evaluation_criteria}
 
         You understand that focusing conversation harnesses the group's collective intelligence.
         """
 
-        self.topic = topic
-        self.evaluation_criteria = evaluation_criteria
-
-        super().__init__("BrokerBobby", persona, 'gpt-5-mini-2025-08-07')
-        self.current_turn = 0
+        super().__init__("BrokerBobby", persona, model=model, provider=provider)
         self.agents = []
     
     def set_agents(self, agents: List[BaseAgent]):
@@ -47,47 +45,6 @@ class BrokerAgent(BaseAgent):
         The following users are participating in the conversation:
         {", ".join([agent.name for agent in self.agents])}"""
 
-        self.add_to_history(introduction, "The Broker")
         self.logger.debug(f"Topic introduction added to history: {introduction}")
         return introduction
     
-    def get_next_agent(self) -> BaseAgent:
-        """Get the next agent in the round-robin rotation."""
-        if not self.agents:
-            self.logger.error("No agents have been set for the conversation")
-            raise ValueError("No agents have been set for the conversation")
-        
-        agent = self.agents[self.current_turn % len(self.agents)]
-        self.current_turn += 1
-
-        if self.current_turn >= 2 and random.random() < 0.3:
-            # Broker gets to speak, but not too early.
-            return self
-
-        if random.random() < 0.1:
-            random_agent = random.choice(self.agents)
-            self.logger.debug(f"Random next agent: {random_agent.name} (turn {self.current_turn})")
-            return random_agent
-
-        self.logger.debug(f"next agent: {agent.name} (turn {self.current_turn})")
-        return agent
-    
-    def get_conversation_summary(self) -> str:
-        """Get a summary of the conversation so far."""
-        if not self.conversation_history:
-            return "No conversation yet."
-        
-        summary_parts = []
-        for entry in self.conversation_history:
-            summary_parts.append(f"{entry['speaker']}: {entry['message']}")
-        
-        return "\n".join(summary_parts)
-    
-    def respond(self, topic: str) -> str:
-        messages = self._create_messages(topic)
-        response = self.llm.invoke(messages)
-        
-        # Add response to memory for future context
-        self._add_response_to_memory(response.content)
-        
-        return response.content

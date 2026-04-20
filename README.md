@@ -1,40 +1,26 @@
 # Pandemonium
 
-A conversational agent framework built with LangChain that features multiple AI personas engaging in round-robin discussions on any topic.
+A conversational agent framework built with LangChain and LangGraph that features multiple AI personas engaging in round-robin discussions on any topic.
 
 ## Features
 
-- **Multiple AI Personas**: Numerous conversational agents & combinations
-- **Broker Agent**: Manages turn-taking and conversation flow
-- **Progressive Context**: Each agent only sees new conversation context, building state over time
+- **Multiple AI Personas**: Agents assembled from temperament x expertise x trait combinations
+- **LangGraph Orchestration**: Conversation flow driven by a LangGraph StateGraph
+- **Pluggable Turn Strategies**: Round-robin, broker-mediated, or stochastic speaker selection
+- **Broker Agent**: Facilitates discussion, summarizes, and focuses conversation
+- **Evaluator Agent**: Independent post-conversation synthesis against user-defined criteria
+- **JSONL Transcript Logger**: Structured conversation logs with speaker metadata
 - **Flexible Configuration**: Environment-based configuration with dotenv support
-- **Interactive & Automatic Modes**: Run conversations automatically or step through manually
 
 ## Personalities
 
-See `personas.json`; each agent is a combination of a "temperament" (cynical, dreamy, questioning) and an "expertise"
-(engineer, legal, marketing, etc).  By default, we start with 5 random conversational participants, who round-robin
-discuss the topic.
+See `personas.json`; each agent is a combination of a "temperament", an "expertise", and a "trait". By default, we start with 5 random conversational participants.
 
-### Available Personas
+**Temperaments:** cynic, dreamer, optimist, detective, empath, sunny, focused, nononsense, theory, pragmatic, power, creative, scamp, helper, wellactually, cautious, bland, dad, mom, edgy, chaos
 
-**Temperaments:**
-- `cynic`: CynicalCedric - Skeptical, questions assumptions, realistic about challenges
-- `dreamer`: DreamyDrew - Optimistic, creative, sees endless possibilities
-- `focused`: FocusedFrank - Stays on topic, goes deep on salient aspects
-- `helper`: HelpfulHarry - Follows others' lead and expands on their thoughts
-- `wellactually`: WellAcktchuallyWally - Stickler for facts, holds others to factual statements
-- `cautious`: CautiousCathy - Considers risks and implications carefully
-- `bland`: BlandBobby - Simple, no strong opinions, stays focused
+**Expertise:** improv, politico, storyteller, comic, airesearcher, writer, PMM, devadvocate, security, hacker, engineer, engineering_manager, intern, legal, support_engineer, designer, data_analyst, people_ops, csm, account_executive, sdr, marketing, executive, productmanager, freemason
 
-**Expertise:**
-- `devadvocate`: Developer Advocate - Helps users adopt technology
-- `security`: Security Expert - Knowledgeable about security issues and risks
-- `engineer`: Principal Engineer - Software engineering and development expertise
-- `intern`: College Intern - Eager to learn, asks questions
-- `legal`: Corporate Counsel - Legal issues and risk navigation
-- `marketing`: Marketing Expert - Business positioning and market strategy
-- `executive`: Executive - Strategic alignment and company growth
+**Traits:** generalist, focus, focused, yesand, chaos, detached, edgy, socratic, devilsadvocate, visionary, realist, meta
 
 ## Setup
 
@@ -52,135 +38,176 @@ Copy the environment template and add your OpenAI API key:
 cp .env.template .env
 ```
 
-Edit `.env` and add your OpenAI API key:
+Edit `.env`:
 
 ```env
 OPENAI_API_KEY=your_openai_api_key_here
-OPENAI_MODEL=gpt-3.5-turbo
+OPENAI_MODEL=gpt-5
+TEMPERATURE=0.7
+CONTEXT_ROUNDS=3
+SUMMARY_AFTER_ROUNDS=3
 ```
 
 ### 3. Run the Application
 
 ```bash
-python main.py "Your conversation topic here"
+python main.py -t "Your conversation topic here"
 ```
 
 ## Usage
 
 ### Basic Usage
 
-Start a conversation on any topic:
-
 ```bash
-python main.py "The future of artificial intelligence"
+python main.py -t "The future of artificial intelligence"
 ```
 
 ### Advanced Options
 
 ```bash
 # Set number of conversation rounds
-python main.py "Climate change solutions" --rounds 5
+python main.py -t "Climate change solutions" --rounds 5
 
-# Interactive mode (step through each turn)
-python main.py "Remote work vs office work" --interactive
+# Specify custom agents by temperament,expertise,trait
+python main.py -t "AI ethics" --agents "helper,engineer,generalist" "cynic,security,focused"
 
-# Specify custom agents by temperament,expertise
-python main.py "AI ethics" --agents "helper,engineer" "cynic,security" "dreamer,marketing"
+# Choose a turn-taking strategy
+python main.py -t "Remote work" --strategy round_robin
+python main.py -t "Remote work" --strategy stochastic
 
-# Mix specific and random agents (use empty string for random)
-python main.py "Climate change" --agents ",marketing" "dreamer," "focused,legal"
+# Save a JSONL transcript
+python main.py -t "Space exploration" --transcript output.jsonl
 
-# List available personas
+# Set evaluation criteria
+python main.py -t "Business observability" --criteria "most practical product ideas"
+
+# List available personas, traits, and strategies
 python main.py --list-personas
 
 # Combine options
-python main.py "Space exploration" --rounds 4 --interactive --agents "cautious,engineer" "dreamer,executive"
+python main.py -t "Space exploration" --rounds 4 --strategy stochastic --agents "cautious,engineer,realist" "dreamer,executive,visionary" --transcript space.jsonl
 ```
 
 ### Command Line Arguments
 
-- `topic`: The conversation topic (required)
-- `--rounds, -r`: Number of conversation rounds (default: 3)
-- `--interactive, -i`: Run in interactive mode for manual turn progression
-- `--agents`: Specify agents by temperament,expertise combinations (e.g., 'helper,engineer' 'cynic,security')
-- `--list-personas`: List available temperament and expertise options from personas.json
+| Flag | Description |
+|------|-------------|
+| `--topic, -t` | The conversation topic (string or path to a text file) |
+| `--run` | Like `--topic` but auto-creates structured output in `output/<slug>/` |
+| `--rounds, -r` | Number of conversation rounds (default: 3) |
+| `--messages, -m` | Max messages for message-based strategies like `chatroom` (overrides `--rounds`) |
+| `--criteria, -c` | Evaluation criteria for the final synthesis |
+| `--agents` | Agent specs as `temperament,expertise,trait` strings |
+| `--strategy, -s` | Turn strategy: `round_robin`, `broker_mediated`, `stochastic`, `chatroom` (default: `broker_mediated`) |
+| `--config` | Path to JSON config file with agent/model specifications (mutually exclusive with `--agents`) |
+| `--transcript, -o` | Path for JSONL transcript output |
+| `--json` | Output structured JSONL to stdout (one JSON object per line) |
+| `--list-personas` | List available temperaments, expertise, traits, and strategies |
+| `--broker-mode` | Broker participation: `silent` (default) or `active` |
+| `--log-level` | Logging level: DEBUG, INFO, WARNING, ERROR (default: INFO) |
 
 ### Agent Specification Format
 
-The `--agents` flag accepts multiple agent specifications in the format `temperament,expertise`:
+The `--agents` flag accepts `temperament,expertise,trait` strings:
 
-- **Specific agents**: `"helper,engineer"` - Creates a helpful temperament with engineering expertise
-- **Random temperament**: `",engineer"` - Random temperament with engineering expertise  
-- **Random expertise**: `"helper,"` - Helpful temperament with random expertise
-- **Random both**: `","` - Both temperament and expertise are random (same as default behavior)
+- **Fully specified**: `"helper,engineer,generalist"`
+- **Random temperament**: `",engineer,generalist"`
+- **Random expertise**: `"helper,,focused"`
+- **Trait defaults to generalist**: `"cynic,security"`
 
-Examples:
+### Structured Output (`--json`)
+
+The `--json` flag emits one JSON object per line to stdout, making the CLI parseable by scripts and AI agents. All diagnostic output goes to stderr so stdout is pure JSONL.
+
 ```bash
-# 3 specific agents
-python main.py "Tech ethics" --agents "cynic,security" "dreamer,marketing" "cautious,legal"
+# Run with structured output
+python main.py --json -t "AI regulation" --rounds 2
 
-# Mix of specific and random
-python main.py "AI future" --agents "focused,engineer" ",marketing" "dreamer,"
-
-# Single agent with random expertise
-python main.py "Climate policy" --agents "cautious,"
+# Discover valid persona options as JSON
+python main.py --list-personas --json
 ```
+
+Event types emitted to stdout:
+
+| type | fields | when |
+|------|--------|------|
+| `message` | `speaker`, `content`, `timestamp` | Each conversation turn and broker intro |
+| `complete` | `speaker`, `content`, `timestamp` | Final evaluation and wrap-up |
+| `token_summary` | `input_tokens`, `output_tokens`, `total_tokens` | After conversation completes |
+
+### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success |
+| 1 | Configuration error (missing API key, invalid agent spec, bad config file) |
+| 2 | Runtime error (unexpected exception during conversation) |
+| 130 | Keyboard interrupt |
+
+## Turn-Taking Strategies
+
+| Strategy | Behavior |
+|----------|----------|
+| `round_robin` | Fixed order, every agent speaks once per round. Broker never interjects. |
+| `broker_mediated` | All agents speak once per round. Broker interjects every 3 agent turns to summarize/redirect. |
+| `stochastic` | Shuffled order per round. Broker has ~30% chance of interjecting between turns. |
 
 ## How It Works
 
 1. **Topic Introduction**: The Broker agent introduces the conversation topic
-2. **Round-Robin Discussion**: Agents take turns responding in a fixed order:
-   - The Cynic
-   - The Dreamer  
-   - The Cautious
-3. **Progressive Context**: Each agent only receives conversation context they haven't seen before
-4. **State Building**: Agents build understanding of the conversation over multiple rounds
-5. **Conversation Conclusion**: After the specified rounds, the Broker concludes the discussion
-
-## Example Output
-
-```
-Welcome to our conversation! Today we'll be discussing: The future of artificial intelligence
-
-I'll be facilitating this discussion, and we have three distinct perspectives joining us:
-- The Cynic, who will bring skepticism and critical thinking
-- The Dreamer, who will share optimism and big-picture thinking  
-- The Cautious, who will consider risks and implications carefully
-
-Let's begin with our first round of thoughts on this topic.
-
-==================================================
-
-The Cynic: While everyone's excited about AI's potential, I can't help but wonder if we're getting ahead of ourselves. What about the massive energy consumption? The bias in training data? The fact that we're essentially creating black boxes that even their creators don't fully understand?
-
-------------------------------
-
-The Dreamer: I see AI as humanity's greatest leap forward! Imagine personalized education for every child, medical breakthroughs happening in real-time, and creative collaborations between humans and machines that we can't even conceive of yet. We're on the brink of solving problems that have plagued us for centuries!
-
-------------------------------
-
-The Cautious: Both perspectives raise valid points. Before we rush forward, we need to establish robust ethical frameworks, ensure equitable access, and create safeguards against misuse. The potential is enormous, but so are the risks if we don't proceed thoughtfully.
-```
+2. **Round Planning**: The turn strategy plans the speaker order for each round
+3. **Speaker Selection**: The graph selects the next speaker from the planned order
+4. **Agent Response**: The selected agent generates a response using its persona and recent context
+5. **Round Check**: After each response, the graph checks if the round is complete
+6. **Repeat**: Steps 3-5 loop until all rounds are complete
+7. **Evaluation**: A fresh EvaluatorAgent synthesizes the conversation against the evaluation criteria
 
 ## Architecture
 
 ```
 pandemonium/
 ├── __init__.py
-├── config.py              # Configuration management
-├── conversation.py        # Conversation orchestration
+├── config.py              # Configuration from .env
+├── graph.py               # LangGraph StateGraph orchestrator
+├── conversation.py        # Factory/facade: builds agents, runs graph
+├── turn_strategies.py     # Pluggable turn-taking strategies
+├── transcript.py          # JSONL transcript logger
 ├── agents/
 │   ├── __init__.py
-│   ├── base_agent.py      # Base agent class
-│   ├── broker.py          # Broker agent
-│   ├── cynic.py           # Cynic persona
-│   ├── dreamer.py         # Dreamer persona
-│   └── cautious.py        # Cautious persona
-├── main.py                # CLI application
-├── requirements.txt       # Dependencies
-├── .env.template         # Environment template
-└── README.md             # This file
+│   ├── base_agent.py      # Base agent class (LangChain ChatOpenAI)
+│   ├── broker.py          # Broker agent (facilitator)
+│   ├── meta_agent.py      # Persona-loaded agents from personas.json
+│   └── evaluator_agent.py # Post-conversation evaluator
+main.py                    # CLI entry point
+personas.json              # Temperament x expertise x trait definitions
 ```
+
+### Graph Structure
+
+The conversation is driven by a LangGraph `StateGraph` with these nodes:
+
+```
+START -> introduce_topic -> select_speaker -> agent_respond -> check_round
+                                ^                                  |
+                                |--- (round incomplete) -----------|
+                                                                   |
+                                         evaluate <-- (rounds done)|
+                                            |
+                                           END
+```
+
+State uses `Annotated[list[BaseMessage], operator.add]` for append-only message accumulation. Agent instances and the turn strategy are passed via `RunnableConfig`, not state (they aren't serializable).
+
+## Transcript Format
+
+When using `--transcript`, each line is a JSON object:
+
+```json
+{"timestamp": "2026-04-17T01:21:03.891635+00:00", "round_number": 0, "turn_number": 1, "speaker": "BrokerBobby", "speaker_type": "broker", "content": "...", "persona_config": null, "token_count": null}
+{"timestamp": "2026-04-17T01:21:05.123456+00:00", "round_number": 0, "turn_number": 2, "speaker": "cynical_engineer3", "speaker_type": "agent", "content": "...", "persona_config": {"temperament": "cynic", "expertise": "engineer"}, "token_count": null}
+```
+
+The `token_count` field is reserved for future tiktoken integration.
 
 ## Requirements
 
@@ -191,4 +218,3 @@ pandemonium/
 ## License
 
 This project is open source and available under the MIT License.
-

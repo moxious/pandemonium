@@ -3,53 +3,32 @@ EvaluatorAgent implementation for conversation evaluation.
 """
 
 import logging
-from .base_agent import BaseAgent
 from langchain_core.messages import HumanMessage, SystemMessage
-from pandemonium.config import Config
+from pandemonium.config import create_chat_model
 
 
-class EvaluatorAgent(BaseAgent):
-    """A specialized agent for evaluating conversations."""
-    
-    def __init__(self, evaluation_prompt: str, model=Config.OPENAI_MODEL, temperature=0.3):
+class EvaluatorAgent:
+    """A standalone agent for evaluating conversations. Not a conversational participant."""
+
+    def __init__(self, evaluation_prompt: str, model=None, provider=None, temperature=0.3):
+        self.name = "Evaluator"
+        self.persona = evaluation_prompt
+        self.llm = create_chat_model(provider=provider, model=model, temperature=temperature)
+        self.logger = logging.getLogger("pandemonium.agents.evaluator")
+
+    def evaluate_conversation(self, conversation_history: str) -> dict:
+        """Evaluate a conversation based on the provided history.
+
+        Returns dict with 'content', 'input_tokens', 'output_tokens'.
         """
-        Initialize the EvaluatorAgent with an evaluation prompt.
-        
-        Args:
-            evaluation_prompt: The system prompt containing evaluation instructions
-            model: The LLM model to use
-            temperature: Temperature for response generation (lower for more focused evaluation)
-        """
-        super().__init__(
-            name="Evaluator", 
-            persona=evaluation_prompt,  # Use evaluation prompt as the persona/system message
-            model=model, 
-            temperature=temperature
-        )
-        self.logger = logging.getLogger(f"pandemonium.agents.evaluator")
-    
-    def respond(self, topic: str) -> str:
-        """
-        Required implementation of abstract method from BaseAgent.
-        This method is not used for evaluation - use evaluate_conversation instead.
-        """
-        raise NotImplementedError("Use evaluate_conversation() method for evaluation")
-    
-    def evaluate_conversation(self, conversation_history: str) -> str:
-        """
-        Evaluate a conversation based on the provided history.
-        
-        Args:
-            conversation_history: The full conversation history as a string
-            
-        Returns:
-            The evaluation response
-        """
-        # Create messages with evaluation prompt as system message and history as user message
         messages = [
             SystemMessage(content=self.persona),
             HumanMessage(content=conversation_history)
         ]
-        
         response = self.llm.invoke(messages)
-        return response.content
+        usage = getattr(response, 'usage_metadata', None) or {}
+        return {
+            "content": response.content,
+            "input_tokens": usage.get("input_tokens", 0),
+            "output_tokens": usage.get("output_tokens", 0),
+        }

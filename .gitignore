@@ -189,6 +189,7 @@ Thumbs.db
 # Project specific
 *.log
 *.tmp
+output/
 
 # Do not store debates tracker or logs
 DEBATES.md
