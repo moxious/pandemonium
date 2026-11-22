@@ -4,15 +4,21 @@ This file is the shared context for all AI coding agents working on this repo.
 
 ## What This Project Is
 
-A multi-persona AI chatroom simulator. LLM-powered agents with distinct personalities discuss a topic in rounds, orchestrated by a LangGraph StateGraph. A broker agent facilitates, and an evaluator agent synthesizes the outcome at the end.
+A multi-persona AI chatroom simulator orchestrated by a LangGraph StateGraph.
 
-## Key Architecture Decisions
+**Read [VISION.md](VISION.md) before proposing a feature or design change.** It is the project's acceptance policy: what pandemonium is for, what it owns, its principles, and which changes to accept or resist. Do not restate or override it here.
 
-- **LangGraph drives orchestration.** The conversation loop lives in `graph.py` as a compiled StateGraph, not in application code. `conversation.py` is a factory that builds agents and invokes the graph.
-- **Round-based context windowing.** Agent memory is a `list[BaseMessage]` managed by graph state. Before each turn, `agent_respond` builds a context window from the last `CONTEXT_ROUNDS` rounds (default 3), always pinning the topic introduction at the top. For long conversations (≥`SUMMARY_AFTER_ROUNDS` rounds), a broker-generated summary of earlier discussion is prepended so agents don't lose the thread. Windowing is done in `graph.py`; `base_agent._create_messages()` trusts whatever it receives.
+VISION.md also describes direction the code does not implement yet, such as an LLM-moderator default strategy, JSON-by-default output, and Frame Shop roles as the source of expertise. For current behavior, trust this file and the code.
+
+## Implementation Notes
+
+How the code implements the principles in VISION.md:
+
+- **Orchestration.** The conversation loop lives in `graph.py` as a compiled StateGraph. `conversation.py` is a factory that builds agents and invokes the graph.
+- **Round-based context windowing.** Agent memory is a `list[BaseMessage]` managed by graph state. Before each turn, `agent_respond` builds a context window from the last `CONTEXT_ROUNDS` rounds (default 3), always pinning the topic introduction at the top. For long conversations (≥`SUMMARY_AFTER_ROUNDS` rounds), a broker-generated summary of earlier discussion is prepended. Windowing is done in `graph.py`; `base_agent._create_messages()` trusts whatever it receives.
 - **Append-only state.** `ConversationState.messages` uses `Annotated[list, operator.add]` so graph nodes return new messages to append, never replace the list.
-- **Agents passed via config, not state.** Agent objects (with LLM clients) go in `RunnableConfig["configurable"]`, not in `ConversationState`. State must remain serializable.
-- **Pluggable turn strategies.** Who speaks next is controlled by a `TurnStrategy` (in `turn_strategies.py`), not by the broker. The broker is a participant, not a controller.
+- **Agents in config.** Agent objects (with LLM clients) go in `RunnableConfig["configurable"]`, not in `ConversationState`.
+- **Turn strategies.** Speaker selection is implemented by `TurnStrategy` subclasses in `turn_strategies.py` and `chatroom_strategy.py`.
 
 ## File Map
 
