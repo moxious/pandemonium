@@ -38,7 +38,7 @@ class Config:
             level=getattr(logging, cls.LOG_LEVEL),
             format=cls.LOG_FORMAT,
             handlers=[
-                logging.StreamHandler()  # Output to stdout
+                logging.StreamHandler()  # stderr, so stdout stays pure JSONL
             ]
         )
         

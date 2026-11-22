@@ -141,8 +141,10 @@ Stdout emits one JSON object per line. Three event types:
 Run the end-to-end tests after any major modification to verify the conversation pipeline still works:
 
 ```
-.venv/bin/python -m unittest tests.test_e2e -v
+.venv/bin/python -m unittest tests.test_e2e tests.test_fixes -v
 ```
+
+`tests/test_fixes.py` holds regression tests for specific orchestration bugs (event contract, name collisions, run-length limits, failed turns).
 
 The e2e tests mock `create_chat_model` at both import sites (`agents/base_agent.py` and `agents/evaluator_agent.py`) so no API keys or network access are needed. They exercise the full LangGraph pipeline: topic introduction, speaker selection, agent responses, round management, evaluation, and token tracking.
 
