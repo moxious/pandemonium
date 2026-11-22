@@ -42,11 +42,14 @@ Edit `.env`:
 
 ```env
 OPENAI_API_KEY=your_openai_api_key_here
-OPENAI_MODEL=gpt-5
+OPENAI_MODEL=gpt-6.2-astra
+OPENAI_REASONING_EFFORT=medium
 TEMPERATURE=0.7
 CONTEXT_ROUNDS=3
 SUMMARY_AFTER_ROUNDS=3
 ```
+
+`OPENAI_REASONING_EFFORT` applies to OpenAI reasoning models such as the default `gpt-6.2-astra`. These models only accept the default temperature, so `TEMPERATURE` is not sent while a reasoning effort is set. To use a model without reasoning, such as `gpt-4o`, set `OPENAI_REASONING_EFFORT=` (empty) and `TEMPERATURE` applies again. `TEMPERATURE` always applies to Anthropic models. In a `--config` file, `defaults.reasoning_effort` overrides the environment value.
 
 ### 3. Run the Application
 

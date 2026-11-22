@@ -13,7 +13,10 @@ class Config:
     """Configuration class for Pandemonium."""
 
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-    OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5")
+    OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-6.2-astra")
+    # Reasoning effort for OpenAI reasoning models (e.g. low, medium, high).
+    # Set to an empty string for models that do not take one, such as gpt-4o.
+    OPENAI_REASONING_EFFORT = os.getenv("OPENAI_REASONING_EFFORT", "medium")
     ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
     ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
     DEFAULT_PROVIDER = os.getenv("DEFAULT_PROVIDER", "openai")
@@ -80,11 +83,17 @@ def create_chat_model(provider=None, model=None, temperature=None):
         from langchain_openai import ChatOpenAI
         if not Config.OPENAI_API_KEY:
             raise ValueError("OPENAI_API_KEY is required for OpenAI models. Please set it in your .env file.")
-        return ChatOpenAI(
-            model=model or Config.OPENAI_MODEL,
-            openai_api_key=Config.OPENAI_API_KEY,
-            temperature=temperature,
-        )
+        kwargs = {
+            "model": model or Config.OPENAI_MODEL,
+            "openai_api_key": Config.OPENAI_API_KEY,
+        }
+        if Config.OPENAI_REASONING_EFFORT:
+            # Reasoning models reject any temperature other than the default,
+            # so it is not sent when a reasoning effort is configured.
+            kwargs["reasoning_effort"] = Config.OPENAI_REASONING_EFFORT
+        else:
+            kwargs["temperature"] = temperature
+        return ChatOpenAI(**kwargs)
     else:
         raise ValueError(f"Unknown provider '{provider}'. Supported: openai, anthropic")
 

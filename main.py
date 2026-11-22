@@ -405,6 +405,8 @@ def _load_config_file(config_path):
             Config.OPENAI_MODEL = defaults["model"]
     if "temperature" in defaults:
         Config.TEMPERATURE = float(defaults["temperature"])
+    if "reasoning_effort" in defaults:
+        Config.OPENAI_REASONING_EFFORT = defaults["reasoning_effort"] or ""
 
     # Parse agent specs as list of dicts
     agent_specs = config_data.get("agents", None)
