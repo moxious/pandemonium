@@ -9,7 +9,7 @@ class BrokerAgent(BaseAgent):
     """A broker agent that manages turn-taking and conversation flow."""
     
     def __init__(self, topic: str, evaluation_criteria: str = "pick most interesting or important issues",
-                 model='gpt-5-mini-2025-08-07', provider='openai'):
+                 model=None, provider=None):
         self.topic = topic
         self.evaluation_criteria = evaluation_criteria
 

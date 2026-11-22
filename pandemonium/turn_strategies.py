@@ -114,6 +114,11 @@ STRATEGIES = {
 }
 
 
+def strategy_names() -> List[str]:
+    """Every valid strategy name, including the lazily imported chatroom."""
+    return list(STRATEGIES.keys()) + ["chatroom"]
+
+
 def get_strategy(name: str, **kwargs) -> TurnStrategy:
     """Get a turn strategy by name.
 
@@ -128,6 +133,5 @@ def get_strategy(name: str, **kwargs) -> TurnStrategy:
         from pandemonium.chatroom_strategy import ChatRoomStrategy
         return ChatRoomStrategy(**kwargs)
     if name not in STRATEGIES:
-        available = list(STRATEGIES.keys()) + ["chatroom"]
-        raise ValueError(f"Unknown strategy '{name}'. Available: {available}")
+        raise ValueError(f"Unknown strategy '{name}'. Available: {strategy_names()}")
     return STRATEGIES[name](**kwargs)

@@ -14,6 +14,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Message cap for message-based strategies when the caller sets none.
+DEFAULT_MAX_MESSAGES = 30
+
 
 class Conversation:
     """Factory that builds agents and runs conversations via LangGraph."""
@@ -69,10 +72,14 @@ class Conversation:
                     model = None
                     provider = None
                 logger.info(f"Creating agent temperament={temperament}, expertise={expertise}, trait={trait}, provider={provider}, model={model}")
-                agent = MetaAgent(temperament=temperament, expertise=expertise, trait=trait, model=model, provider=provider)
+                agent = MetaAgent(temperament=temperament, expertise=expertise, trait=trait,
+                                  model=model, provider=provider,
+                                  taken_names=self._taken_names())
                 self.agents.append(agent)
         else:
-            self.agents = [MetaAgent() for _ in range(5)]
+            self.agents = []
+            for _ in range(5):
+                self.agents.append(MetaAgent(taken_names=self._taken_names()))
 
         # Broker needs agent list for introduction
         self.broker.set_agents(self.agents)
@@ -96,6 +103,10 @@ class Conversation:
         self.max_rounds = 3
         self.max_messages = 0  # 0 means round-based mode
 
+    def _taken_names(self) -> set:
+        """Names already in the room, so new agents never collide with them."""
+        return {self.broker.name} | {agent.name for agent in self.agents}
+
     def set_max_rounds(self, rounds: int):
         """Set the maximum number of conversation rounds."""
         self.max_rounds = rounds
@@ -112,6 +123,12 @@ class Conversation:
             speaker: speaker name
             content: message content
         """
+        max_messages = self.max_messages
+        if self.turn_strategy.is_message_based and max_messages <= 0:
+            # Message-based strategies never advance rounds, so they need a
+            # message cap or the graph never reaches evaluation.
+            max_messages = DEFAULT_MAX_MESSAGES
+
         initial_state: ConversationState = {
             "messages": [],
             "topic": self.topic,
@@ -124,22 +141,25 @@ class Conversation:
             "round_boundaries": [],
             "summary": "",
             "message_count": 0,
-            "max_messages": self.max_messages,
+            "max_messages": max_messages,
             "speaker_history": [],
+            "consecutive_failures": 0,
         }
 
-        # Each speaker visits 3 nodes per turn (select → respond → check).
-        if self.turn_strategy.is_message_based:
-            # message-based: intro + (messages * 3 steps each) + evaluate + margin
-            step_estimate = 1 + (self.max_messages * 3) + 1 + 15
+        # should_continue() is what ends the run; the recursion limit is only a
+        # backstop against a runaway loop, so size it for the worst case.
+        # Each turn visits 3 nodes (select → respond → check).
+        if max_messages > 0:
+            max_turns = max_messages
         else:
-            # round-based: intro + (speakers_per_round * rounds * 3) + evaluate + margin
-            num_speakers = len(self.agent_registry) + 1  # agents + broker
-            step_estimate = 2 + (num_speakers * self.max_rounds * 3) + 10
+            # A round can plan at most one broker turn between each pair of
+            # agents (stochastic with p=1.0), i.e. 2n - 1 turns.
+            max_turns = self.max_rounds * (2 * len(self.agent_registry))
+        step_limit = 2 + (max_turns * 3) + 20
 
         self.token_tracker = TokenTracker()
         config = {
-            "recursion_limit": max(50, step_estimate),
+            "recursion_limit": max(50, step_limit),
             "configurable": {
                 "agents": self.agent_registry,
                 "broker": self.broker,
@@ -158,9 +178,11 @@ class Conversation:
                     if not content.strip():
                         continue
 
-                    if node_name == "evaluate" or "Conversation Complete" in content:
+                    # Classify by the node that produced the message, never by
+                    # content: an agent may say anything.
+                    if node_name == "evaluate":
                         yield {"type": "complete", "speaker": "system", "content": content}
                     elif node_name == "introduce_topic":
                         yield {"type": "message", "speaker": "Broker", "content": content}
                     elif node_name == "agent_respond":
-                        yield {"type": "message", "speaker": state_update.get("current_speaker", ""), "content": content}
+                        yield {"type": "message", "speaker": state_update["current_speaker"], "content": content}

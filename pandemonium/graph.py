@@ -33,6 +33,22 @@ class ConversationState(TypedDict):
     message_count: int  # total agent/broker turns produced
     max_messages: int  # conversation length limit (0 = round-based mode)
     speaker_history: Annotated[List[str], operator.add]  # append-only speaker sequence
+    consecutive_failures: int  # turns in a row whose LLM call failed
+
+
+# Abort the run once this many turns in a row fail; a single failure is skipped.
+MAX_CONSECUTIVE_FAILURES = 3
+
+
+def _persona_config(agent) -> dict:
+    """Persona fields for transcript entries, or None for non-persona agents."""
+    if not (hasattr(agent, "temperament") and hasattr(agent, "expertise")):
+        return None
+    return {
+        "temperament": agent.temperament,
+        "expertise": agent.expertise,
+        "trait": getattr(agent, "trait", None),
+    }
 
 
 def introduce_topic(state: ConversationState, config: RunnableConfig) -> dict:
@@ -67,6 +83,7 @@ def introduce_topic(state: ConversationState, config: RunnableConfig) -> dict:
         "round_boundaries": [0],  # round 0 starts at message index 0
         "message_count": 0,
         "speaker_history": [],
+        "consecutive_failures": 0,
     }
 
 
@@ -86,6 +103,7 @@ def select_speaker(state: ConversationState, config: RunnableConfig) -> dict:
             agent_metadata[name] = {
                 "temperament": getattr(agent, "temperament", ""),
                 "expertise": getattr(agent, "expertise", ""),
+                "trait": getattr(agent, "trait", ""),
             }
 
         speaker = turn_strategy.select_next_speaker(
@@ -172,7 +190,29 @@ def agent_respond(state: ConversationState, config: RunnableConfig) -> dict:
     msg_num = state.get("message_count", 0) if turn_strategy.is_message_based else state["round_count"]
     label = "Msg" if turn_strategy.is_message_based else "Round"
     logger.info(f"{label} {msg_num}: {speaker_name} responding")
-    result = agent.respond(state["topic"], context_messages=context_messages)
+    new_speakers = state["speakers_this_round"] + [speaker_name]
+
+    # The provider clients already retry transient errors. A turn that still
+    # fails is skipped so one bad call does not end the run; repeated failures
+    # (e.g. a bad key or model name) still abort.
+    try:
+        result = agent.respond(state["topic"], context_messages=context_messages)
+    except Exception as e:
+        failures = state.get("consecutive_failures", 0) + 1
+        if failures >= MAX_CONSECUTIVE_FAILURES:
+            raise RuntimeError(
+                f"{failures} consecutive turns failed; last error from {speaker_name}: {e}"
+            ) from e
+        logger.warning(f"Skipping turn for {speaker_name} after LLM error: {e}")
+        return {
+            "messages": [],
+            "current_speaker": speaker_name,
+            "speakers_this_round": new_speakers,
+            "message_count": state.get("message_count", 0) + 1,
+            "speaker_history": [speaker_name],
+            "consecutive_failures": failures,
+        }
+
     response = result["content"]
 
     # Track token usage
@@ -180,29 +220,23 @@ def agent_respond(state: ConversationState, config: RunnableConfig) -> dict:
     if token_tracker:
         token_tracker.track(result["input_tokens"], result["output_tokens"])
 
-    new_speakers = state["speakers_this_round"] + [speaker_name]
-
     if transcript_logger:
-        persona_config = None
-        if hasattr(agent, 'temperament') and hasattr(agent, 'expertise'):
-            persona_config = {
-                "temperament": agent.temperament,
-                "expertise": agent.expertise,
-            }
         transcript_logger.log_entry(
             round_number=state["round_count"],
             speaker=speaker_name,
             speaker_type=speaker_type,
             content=response,
-            persona_config=persona_config,
+            persona_config=_persona_config(agent),
             token_count=result["input_tokens"] + result["output_tokens"],
         )
 
     return {
         "messages": [AIMessage(content=f"{speaker_name}: {response}")],
+        "current_speaker": speaker_name,
         "speakers_this_round": new_speakers,
         "message_count": state.get("message_count", 0) + 1,
         "speaker_history": [speaker_name],
+        "consecutive_failures": 0,
     }
 
 
@@ -322,7 +356,7 @@ statement that says:
 Result: (your synthesis of the best outcome in no more than 3 sentences)
 """
 
-    evaluator = EvaluatorAgent(evaluation_prompt, model='gpt-5', temperature=0.5)
+    evaluator = EvaluatorAgent(evaluation_prompt, temperature=0.5)
 
     # Format all messages for evaluation
     history_parts = [msg.content for msg in state["messages"]]

@@ -67,11 +67,32 @@ def validate_spec(temperament: str = None, expertise: str = None, trait: str = "
         raise ValueError(f"Trait '{trait}' not found. Available: {list(personas['traits'].keys())}")
 
 
+def _unique_name(base_name: str, taken: set) -> str:
+    """Return base_name plus a numeric suffix that is not in `taken`.
+
+    Prefers a random suffix in 1-10 (the historical naming scheme) and falls
+    back to the next free number above 10.
+    """
+    free = [n for n in range(1, 11) if f"{base_name}{n}" not in taken]
+    if free:
+        return f"{base_name}{random.choice(free)}"
+    n = 11
+    while f"{base_name}{n}" in taken:
+        n += 1
+    return f"{base_name}{n}"
+
+
 class MetaAgent(BaseAgent):
     """A meta agent that can take on different personas loaded from a JSON file."""
 
     def __init__(self, temperament: str = None, expertise: str = None, trait: str = "generalist",
-                 personas_file: str = "personas.json", model=None, provider=None):
+                 personas_file: str = "personas.json", model=None, provider=None,
+                 taken_names=None):
+        """Build a persona agent.
+
+        taken_names: names already used in the room; the generated name is
+        guaranteed not to be one of them.
+        """
         personas = _load_personas(personas_file)
 
         if not temperament:
@@ -83,10 +104,12 @@ class MetaAgent(BaseAgent):
 
         self.temperament = temperament
         self.expertise = expertise
+        self.trait = trait
 
         validate_spec(temperament, expertise, trait, personas_file)
 
-        name = personas["temperaments"][temperament]["description"] + "_" + expertise + "%d" % random.randint(1, 10)
+        base_name = personas["temperaments"][temperament]["description"] + "_" + expertise
+        name = _unique_name(base_name, set(taken_names or ()))
         temperament_description = personas["temperaments"][temperament]['persona']
         expertise_description = personas["expertise"][expertise]['persona']
         trait_description = personas["traits"][trait]

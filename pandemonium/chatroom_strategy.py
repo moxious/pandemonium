@@ -8,6 +8,7 @@ interjections.
 """
 
 import random
+import re
 from typing import List, Dict
 
 from langchain_core.messages import BaseMessage
@@ -43,6 +44,17 @@ DEFAULT_IMPULSE = 0.5
 BROKER_BASE_URGENCY = 0.3
 BROKER_URGENCY_RATE = 0.15
 BROKER_INTERVENTION_THRESHOLD = 5
+
+
+def _mentions(text: str, word: str) -> bool:
+    """True if `word` appears in `text` as a whole token, case-insensitively.
+
+    A plain substring test would let "engineer1" match "engineer10", or an
+    empty expertise match everything.
+    """
+    if not word:
+        return False
+    return re.search(rf"(?<!\w){re.escape(word)}(?!\w)", text, re.IGNORECASE) is not None
 
 
 class ChatRoomStrategy(TurnStrategy):
@@ -96,10 +108,11 @@ class ChatRoomStrategy(TurnStrategy):
             # 3. Mention boost: was agent named or their expertise referenced?
             mention = 0.0
             if messages:
-                last_content = messages[-1].content.lower()
-                if name.lower() in last_content:
+                last_content = messages[-1].content
+                expertise = meta.get("expertise", "")
+                if _mentions(last_content, name):
                     mention = 0.35
-                elif meta.get("expertise", "").lower() in last_content:
+                elif _mentions(last_content, expertise):
                     mention = 0.15
 
             # 4. Consecutive penalty: dampening if agent just spoke

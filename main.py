@@ -11,11 +11,12 @@ import os
 import re
 import json
 import argparse
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from pandemonium.config import Config
 from pandemonium.conversation import Conversation
-from pandemonium.turn_strategies import STRATEGIES
+from pandemonium.turn_strategies import strategy_names
 
 OUTPUT_DIR = Path(__file__).parent / "output"
 
@@ -77,6 +78,13 @@ class TeeStream:
         return getattr(self.original, name)
 
 
+def _retarget_log_handlers(old_stream, new_stream):
+    """Point root logging stream handlers that write to old_stream at new_stream."""
+    for handler in logging.getLogger().handlers:
+        if isinstance(handler, logging.StreamHandler) and handler.stream is old_stream:
+            handler.setStream(new_stream)
+
+
 def main():
     """Main entry point for the Pandemonium application."""
     parser = argparse.ArgumentParser(
@@ -127,7 +135,7 @@ Examples:
 
     parser.add_argument(
         "--strategy", "-s",
-        choices=list(STRATEGIES.keys()) + ["chatroom"],
+        choices=strategy_names(),
         default="broker_mediated",
         help="Turn-taking strategy (default: broker_mediated)"
     )
@@ -180,6 +188,11 @@ Examples:
     global _json_mode
     _json_mode = args.json
 
+    # Initialized before the try so the finally block can always read them.
+    run_log_file = None
+    tee_stdout = None
+    tee_stderr = None
+
     try:
         # Setup logging with command line log level
         Config.LOG_LEVEL = args.log_level
@@ -191,9 +204,6 @@ Examples:
             return
 
         # --run is shorthand for --topic + auto-logging
-        run_log_file = None
-        tee_stdout = None
-        tee_stderr = None
         if args.run:
             if args.topic:
                 parser.error("--run and --topic are mutually exclusive")
@@ -231,6 +241,9 @@ Examples:
             tee_stderr = TeeStream(sys.stderr, run_log_file)
             sys.stdout = tee_stdout
             sys.stderr = tee_stderr
+            # Logging was configured before the tee existed, so its handlers
+            # still hold the original stderr; point them at the tee too.
+            _retarget_log_handlers(tee_stderr.original, tee_stderr)
 
             # Update latest symlinks
             for name, target in [("latest.jsonl", jsonl_path.name), ("latest.log", log_path.name)]:
@@ -276,10 +289,9 @@ Examples:
         )
         conversation.set_max_rounds(args.rounds)
 
+        # Message-based strategies default to 30 messages inside Conversation.
         if args.messages > 0:
             conversation.set_max_messages(args.messages)
-        elif args.strategy == "chatroom":
-            conversation.set_max_messages(30)
 
         _info(f"Strategy: {args.strategy}")
         _info("=" * 50)
@@ -330,6 +342,7 @@ Examples:
         if tee_stdout is not None:
             sys.stdout = tee_stdout.original
         if tee_stderr is not None:
+            _retarget_log_handlers(tee_stderr, tee_stderr.original)
             sys.stderr = tee_stderr.original
         if run_log_file is not None:
             run_log_file.close()
@@ -349,7 +362,7 @@ def _list_personas():
                 "temperaments": list(personas["temperaments"].keys()),
                 "expertise": list(personas["expertise"].keys()),
                 "traits": list(personas["traits"].keys()),
-                "strategies": list(STRATEGIES.keys()) + ["chatroom"],
+                "strategies": strategy_names(),
             }
             print(json.dumps(output, ensure_ascii=False))
             return
@@ -369,7 +382,7 @@ def _list_personas():
             print(f"  {key}")
 
         print("\nAvailable Strategies:")
-        for name in STRATEGIES:
+        for name in strategy_names():
             print(f"  {name}")
 
         print("\nExample usage:")
